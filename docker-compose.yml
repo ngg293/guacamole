@@ -1,102 +1,53 @@
-####################################################################################
-# docker-compose file for Apache Guacamole
-# created by PCFreak 2017-06-28
-#
-# Apache Guacamole is a clientless remote desktop gateway. It supports standard
-# protocols like VNC, RDP, and SSH. We call it clientless because no plugins or
-# client software are required. Thanks to HTML5, once Guacamole is installed on
-# a server, all you need to access your desktops is a web browser.
-####################################################################################
-#
-# What does this file do?
-#
-# Using docker-compose it will:
-#
-# - create a network 'guacnetwork_compose' with the 'bridge' driver.
-# - create a service 'guacd_compose' from 'guacamole/guacd' connected to 'guacnetwork_compose'
-# - create a service 'postgres_guacamole_compose' (1) from 'postgres' connected to 'guacnetwork_compose'
-# - create a service 'guacamole_compose' (2)  from 'guacamole/guacamole/' conn. to 'guacnetwork_compose'
-# - create a service 'nginx_guacamole_compose' (3) from 'nginx' connected to 'guacnetwork_compose'
-#
+# - 네트워크 생성 'guacnetwork_compose' 를 'bridge' 모드로
+# - 서비스 생성'guacd_compose' from 'guacamole/guacd' connected to 'guacnetwork_compose'
+# - 서비스 생성 'postgres_guacamole_compose' (1) from 'postgres' connected to 'guacnetwork_compose'
+# - 서비스 생성 'guacamole_compose' (2)  from 'guacamole/guacamole/' conn. to 'guacnetwork_compose'
+
 # (1)
-#  DB-Init script is in './init/initdb.sql' it has been created executing
+#  DB 초기화 스크립트는 ./init/initdb.sql에 있으며, 이 파일은 다음 명령어를 실행하여 한 번만 생성되었습니다:
 #  'docker run --rm guacamole/guacamole /opt/guacamole/bin/initdb.sh --postgresql > ./init/initdb.sql'
-#  once.
-#  DATA-DIR       is in './data'
-#  If you want to change the DB password change all lines with 'POSTGRES_PASSWORD:' and
-#  change it to your needs before first start.
-#  To start from scratch delete './data' dir completely
-#  './data' will hold all data after first start!
-#  The initdb.d scripts are only executed the first time the container is started
-#  (and the database files are empty). If the database files already exist then the initdb.d
-#  scripts are ignored (e.g. when you mount a local directory or when docker-compose saves
-#  the volume and reuses it for the new container).
 #
-#  !!!!! MAKE SURE your folder './init' is executable (chmod +x ./init)
-#  !!!!! or 'initdb.sql' will be ignored!
-#  
-#  './data' will hold all data after first start!
+#  데이터 디렉토리는 ./data 폴더에 위치합니다. 이 폴더는 Guacamole 컨테이너가 실행된 후 데이터베이스의 데이터를 저장하는 역할을 합니다.
+#  데이터베이스 비밀번호를 변경하려면, 'POSTGRES_PASSWORD:'가 포함된 모든 줄을 수정하여 원하는 비밀번호로 설정하십시오.
+#  이 변경은 처음 시작하기 전에 해야 합니다.
 #
+#  처음부터 다시 시작하려면, ./data 디렉토리를 완전히 삭제하세요.
+#  첫 번째 시작 이후, ./data 디렉토리는 Guacamole의 데이터베이스 데이터를 저장합니다
+#
+#  initdb.d 스크립트는 컨테이너가 처음 시작될 때만 실행됩니다. 데이터베이스 파일이 비어있을 때만 초기화 스크립트가 실행됩니다.
+#  만약 이미 데이터베이스 파일이 존재한다면, initdb.d 스크립트는 무시됩니다. 
+#  예를 들어, 로컬 디렉토리를 마운트하거나, docker-compose가 볼륨을 저장하고 새 컨테이너에서 재사용하는 경우입니다.
+#
+#  ./init 폴더가 실행 가능하도록 설정되어 있는지 확인하십시오. 실행 가능하지 않으면 initdb.sql 파일이 무시됩니다. 
+#  chmod +x ./init 명령어로 폴더의 실행 권한을 부여해야 합니다.
+
 # (2)
-#  Make sure you use the same value for 'POSTGRES_USER' and 'POSTGRES_PASSWORD'
-#  as configured under (1)
+# 아이디와 비밀번호를 설정하세요 'POSTGRES_USER' and 'POSTGRES_PASSWORD'
+
+#  과카몰리는 ip :8080/guacamole 에서 실행가능합니다.
+
+# git clone 을 한 이후 ./prepare.sh 를 한번 필수로 실행해야 합니다.
 #
-# (3)
-#  ./nginx/templates folder will be mapped read-only into the container at /etc/nginx/templates
-#  and according to the official nginx container docs the guacamole.conf.template will be
-#  placed in /etc/nginx/conf.d/guacamole.conf after container startup.
-#  ./nginx/ssl will be mapped into the container at /etc/nginx/ssl
-#  prepare.sh creates a a self-signed certificate. If you want to use your own certs
-#  just remove the part that generates the certs from prepare.sh and replace
-#  'self-ssl.key' and 'self.cert' with your certificate.
-#  nginx will export port 8443 to the outside world, make sure that this port is reachable
-#  on your system from the "outside world". All other traffic is only internal.
-#
-#  You could remove the entire 'nginx' service from this file if you want to use your own
-#  reverse proxy in front of guacamole. If doing so, make sure you change the line
-#   from     - 8080/tcp
-#   to       - 8080:8080/tcp
-#  within the 'guacamole' service. This will expose the guacamole webinterface directly
-#  on port 8080 and you can use it for your own purposes.
-#  Note: Guacamole is available on :8080/guacamole, not /.
-#
-# !!!!! FOR INITAL SETUP (after git clone) run ./prepare.sh once
-#
-# !!!!! FOR A FULL RESET (WILL ERASE YOUR DATABASE, YOUR FILES, YOUR RECORDS AND CERTS) DO A
+# !!!!! 초기화를 원한다면
 # !!!!!  ./reset.sh
 #
 #
-# The initial login to the guacamole webinterface is:
+# 초기 비밀번호는 : 
 #
 #     Username: guacadmin
 #     Password: guacadmin
-#
-# Make sure you change it immediately!
-#
-# version            date              comment
-# 0.1                2017-06-28        initial release
-# 0.2                2017-10-09        minor fixes + internal GIT push
-# 0.3                2017-10-09        minor fixes + public GIT push
-# 0.4                2019-08-14        creating of ssl certs now in prepare.sh
-#                                      simplified nginx startup commands
-# 0.5                2023-02-24        nginx now uses a template + some minor changes
-# 0.6                2023-03-23        switched to postgres 15.2-alpine
-# 0.61               2024-07-27        fix networks + version 3.0
-# 0.62               2024-07-27        fix
-#####################################################################################
 
-#the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
-#version: '3.0'
 
-# networks
-# create a network 'guacnetwork_compose' in mode 'bridged'
+
+# 네트워크
+# 'guacnetwork_compose' 네트워크를 'bridge' 모드로 만듭니다.
 networks:
   guacnetwork_compose:
     driver: bridge
 
-# services
+# 서비스
 services:
-  # guacd
+  # guacd (과카몰리서버와 원격서버 중계)
   guacd:
     container_name: guacd_compose
     image: guacamole/guacd
@@ -106,7 +57,7 @@ services:
     volumes:
     - ./drive:/drive:rw
     - ./record:/record:rw
-  # postgres
+  # postgres (데이터베이스)
   postgres:
     container_name: postgres_guacamole_compose
     environment:
@@ -122,7 +73,7 @@ services:
     - ./init:/docker-entrypoint-initdb.d:z
     - ./data:/var/lib/postgresql/data:Z
 
-  # guacamole
+  # 과카몰리
   guacamole:
     container_name: guacamole_compose
     group_add:
@@ -143,24 +94,6 @@ services:
     volumes:
       - ./record:/record:rw
     ports:
-## enable next line if not using nginx
-##    - 8080:8080/tcp # Guacamole is on :8080/guacamole, not /.
-## enable next line when using nginx
-    - 8080/tcp
+      - 8080:8080/tcp
     restart: always
 
-########### optional ##############
-  # nginx
-  nginx:
-   container_name: nginx_guacamole_compose
-   restart: always
-   image: nginx:latest
-   volumes:
-   - ./nginx/templates:/etc/nginx/templates:ro
-   - ./nginx/ssl/self.cert:/etc/nginx/ssl/self.cert:ro
-   - ./nginx/ssl/self-ssl.key:/etc/nginx/ssl/self-ssl.key:ro
-   ports:
-   - 8443:443
-   networks:
-     - guacnetwork_compose
-####################################################################################
