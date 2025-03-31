@@ -115,9 +115,6 @@ prepare.sh는 guacamole/guacamole 도커 이미지를 다운로드하고, 이를
 docker run --rm guacamole/guacamole /opt/guacamole/bin/initdb.sh --postgresql > ./init/initdb.sql
 ~~~
 
-prepare.sh는 PostgreSQL에 필요한 데이터베이스 초기화 파일을 생성합니다.
-
-또한 prepare.sh는 nginx에서 https를 사용하기 위해 필요한 자체 서명된 인증서 ./nginx/ssl/self.cert와 개인 키 ./nginx/ssl/self-ssl.key를 생성합니다.
 
 ## reset.sh
 처음으로 돌아가고 싶다면(초기화) `./reset.sh` 를 실행할 수 있습니다.
